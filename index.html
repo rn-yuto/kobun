@@ -44,6 +44,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .genre-quick-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
 .genre-quick-name{font-weight:600;font-size:.92rem}
 .genre-quick-meta{font-size:.74rem;color:var(--text2)}
+.word-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.word-table th{padding:9px 10px;text-align:left;color:var(--text2);font-size:.7rem;letter-spacing:.06em;border-bottom:1px solid var(--border);font-weight:600;position:sticky;top:0;background:var(--surface)}
+.word-table td{padding:9px 10px;border-bottom:1px solid rgba(74,45,45,0.4);vertical-align:top}
+.word-table tr:hover td{background:var(--surface2)}
+.td-id{color:var(--text2);font-size:.78rem;width:40px}
+.td-en{color:var(--accent2);font-weight:700;white-space:nowrap}
+.td-ja{color:var(--text)}
 .quick-row{display:flex;gap:8px;margin-bottom:16px}
 .quick-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:.78rem;color:var(--text2);cursor:pointer}
 .quick-btn:hover{border-color:var(--accent);color:var(--accent2)}
@@ -106,14 +113,42 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div style="font-size:0.72rem;color:var(--text2);margin-top:14px;text-align:center">ゲストモードは正答率を記録しません</div>
 </div>
 
+<!-- MODE SELECT -->
+<div class="screen" id="screenModeSelect">
+  <div class="home-logo">古文単語帳</div>
+  <div id="modePlayerBadge" class="home-sub" style="margin-bottom:24px">プレイヤー: -</div>
+  <div class="deck-grid" style="max-width:480px">
+    <div class="deck-card" onclick="selectMode('game')">
+      <div class="deck-name">📖 単語帳ゲーム</div>
+      <div class="deck-meta">単語帳を選んで、解答を自己採点しながら学習します</div>
+    </div>
+    <div class="deck-card" onclick="selectMode('list')">
+      <div class="deck-name">📋 単語一覧</div>
+      <div class="deck-meta">単語帳の中身を一覧・検索して確認します</div>
+    </div>
+  </div>
+  <button class="btn-back" onclick="showScreen('screenUserSelect')">← プレイヤー選択へ</button>
+</div>
+
 <!-- HOME: deck select -->
 <div class="screen" id="screenHome">
-  <div class="home-logo">古文単語帳</div>
-  <div class="home-sub">単語帳ゲーム</div>
+  <div class="home-logo" id="homeTitle">古文単語帳</div>
+  <div class="home-sub" id="homeSub">単語帳ゲーム</div>
   <div id="homePlayerBadge" style="margin-bottom:18px;font-size:0.88rem;color:var(--text2)">プレイヤー: -</div>
   <div id="deckLoading" class="loader">単語帳を読み込み中...</div>
   <div class="deck-grid" id="deckGrid" style="display:none"></div>
-  <button class="btn-back" onclick="showScreen('screenUserSelect')">← プレイヤー選択へ</button>
+  <button class="btn-back" onclick="showScreen('screenModeSelect')">← モード選択へ</button>
+</div>
+
+<!-- WORD LIST -->
+<div class="screen" id="screenWordList">
+  <div class="panel" style="max-width:680px">
+    <div class="panel-title" id="listTitle">単語一覧</div>
+    <input type="text" class="user-input" id="listSearch" placeholder="単語・意味・ジャンルで検索..." oninput="renderWordList()" style="margin-bottom:14px">
+    <div class="range-info" id="listCount"></div>
+    <div style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:12px" id="listTableWrap"></div>
+    <button class="btn-back" onclick="showScreen('screenHome')">← 単語帳選択へ戻る</button>
+  </div>
 </div>
 
 <!-- RANGE / CATEGORY SELECT -->
@@ -237,24 +272,18 @@ function updateLocalWordStat(id, isCorrect) {
   saveUserStatsLocal();
 }
 
+let currentAppMode = 'game'; // 'game' or 'list'
+
 function selectUser(user) {
   currentUser = user;
   loadUserStatsLocal();
-  if (user === 'GUEST') {
-    document.getElementById('homePlayerBadge').textContent = 'プレイヤー: GUEST';
-    showScreen('screenHome');
-    if (!deckListLoaded) { deckListLoaded = true; loadDeckList(); }
-    return;
-  }
-  if (!GAS_URL || GAS_URL.startsWith('REPLACE')) {
-    document.getElementById('homePlayerBadge').textContent = 'プレイヤー: ' + user + '（オフライン）';
-    showScreen('screenHome');
-    if (!deckListLoaded) { deckListLoaded = true; loadDeckList(); }
-    return;
-  }
-  document.getElementById('homePlayerBadge').textContent = 'プレイヤー: ' + user + '（同期中...）';
-  showScreen('screenHome');
   if (!deckListLoaded) { deckListLoaded = true; loadDeckList(); }
+  const badgeText = user === 'GUEST' ? 'プレイヤー: GUEST'
+    : (!GAS_URL || GAS_URL.startsWith('REPLACE')) ? 'プレイヤー: ' + user + '（オフライン）'
+    : 'プレイヤー: ' + user + '（同期中...）';
+  document.getElementById('modePlayerBadge').textContent = badgeText;
+  showScreen('screenModeSelect');
+  if (user === 'GUEST' || !GAS_URL || GAS_URL.startsWith('REPLACE')) return;
   fetch(GAS_URL + '?user=' + encodeURIComponent(user))
     .then(r => r.json())
     .then(data => {
@@ -262,11 +291,19 @@ function selectUser(user) {
         userStats = data.stats || {};
         saveUserStatsLocal();
       }
-      document.getElementById('homePlayerBadge').textContent = 'プレイヤー: ' + user + '（オンライン）';
+      document.getElementById('modePlayerBadge').textContent = 'プレイヤー: ' + user + '（オンライン）';
     })
     .catch(() => {
-      document.getElementById('homePlayerBadge').textContent = 'プレイヤー: ' + user + '（オフライン）';
+      document.getElementById('modePlayerBadge').textContent = 'プレイヤー: ' + user + '（オフライン）';
     });
+}
+
+function selectMode(mode) {
+  currentAppMode = mode;
+  document.getElementById('homeTitle').textContent = mode === 'game' ? '古文単語帳' : '単語一覧';
+  document.getElementById('homeSub').textContent = mode === 'game' ? '単語帳ゲーム' : '単語帳を選んで一覧表示';
+  document.getElementById('homePlayerBadge').textContent = document.getElementById('modePlayerBadge').textContent;
+  showScreen('screenHome');
 }
 
 function showScreen(id) {
@@ -308,7 +345,7 @@ async function loadDeckList() {
   const grid = document.getElementById('deckGrid');
   grid.style.display = 'grid';
   grid.innerHTML = DECKS.map((d, i) =>
-    `<div class="deck-card" onclick="selectDeck(${i})">
+    `<div class="deck-card" onclick="onDeckClick(${i})">
        <div class="deck-name">📖 ${escapeHtml(d.name)}</div>
        <div class="deck-meta" id="deckMeta_${i}">読み込み待機中...</div>
      </div>`
@@ -374,24 +411,65 @@ function splitSentences(s) {
   return s.split('。').map(x => x.trim()).filter(x => x.length);
 }
 
+function onDeckClick(i) {
+  if (currentAppMode === 'list') selectDeckForList(i);
+  else selectDeck(i);
+}
+
+async function fetchDeckWords(d) {
+  const r = await fetch(WORDS_DIR + '/' + d.file);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const text = await r.text();
+  if (/^\s*<(!DOCTYPE|html)/i.test(text)) {
+    throw new Error('CSVではなくHTMLが返ってきました（パス誤り、または404）');
+  }
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('CSVが空です');
+  return rows.map(row => ({
+    id: row.id, category: row.category, word: row.word, meaning: parseMeaning(row.meaningRaw)
+  }));
+}
+
+let listWords = [];
+async function selectDeckForList(i) {
+  const d = DECKS[i];
+  try {
+    listWords = await fetchDeckWords(d);
+  } catch (e) {
+    alert('単語帳の読み込みに失敗しました: ' + d.file + '\n(' + e.message + ')');
+    return;
+  }
+  document.getElementById('listTitle').textContent = d.name + '：単語一覧';
+  document.getElementById('listSearch').value = '';
+  renderWordList();
+  showScreen('screenWordList');
+}
+function renderWordList() {
+  const q = document.getElementById('listSearch').value.trim().toLowerCase();
+  const filtered = listWords.filter(w => {
+    if (!q) return true;
+    const meaningText = w.meaning.map(b => b.num + b.lines.join('。')).join(' ').toLowerCase();
+    return w.word.toLowerCase().includes(q) || w.category.toLowerCase().includes(q) || meaningText.includes(q);
+  });
+  document.getElementById('listCount').textContent = filtered.length + ' / ' + listWords.length + ' 語';
+  document.getElementById('listTableWrap').innerHTML =
+    '<table class="word-table"><thead><tr><th style="width:40px">#</th><th style="width:90px">ジャンル</th><th>単語</th><th>意味</th></tr></thead><tbody>' +
+    filtered.map(w =>
+      `<tr><td class="td-id">${escapeHtml(w.id)}</td><td class="td-ja">${escapeHtml(w.category)}</td>` +
+      `<td class="td-en">${escapeHtml(w.word)}</td><td class="td-ja">${escapeHtml(w.meaning.map(b => b.num + b.lines.join('。') + '。').join(' '))}</td></tr>`
+    ).join('') + '</tbody></table>';
+}
+
 // ===================================================================
-// デッキ選択 → 読み込み
+// デッキ選択 → 読み込み（ゲームモード）
 // ===================================================================
 async function selectDeck(i) {
   const d = DECKS[i];
   try {
-    const r = await fetch(WORDS_DIR + '/' + d.file);
-    const text = await r.text();
-    const rows = parseCSV(text);
-    const words = rows.map(row => ({
-      id: row.id,
-      category: row.category,
-      word: row.word,
-      meaning: parseMeaning(row.meaningRaw)
-    }));
+    const words = await fetchDeckWords(d);
     currentDeck = { name: d.name, file: d.file, words };
   } catch (e) {
-    alert('単語帳の読み込みに失敗しました: ' + d.file);
+    alert('単語帳の読み込みに失敗しました: ' + d.file + '\n' + WORDS_DIR + '/' + d.file + ' が正しい場所に存在するか確認してください。\n(' + e.message + ')');
     return;
   }
   await loadDeckStats();
