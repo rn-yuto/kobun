@@ -39,6 +39,11 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .cat-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
 .cat-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:.82rem;color:var(--text2);cursor:pointer;transition:all .15s;user-select:none}
 .cat-chip.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:var(--accent);color:#fff}
+.genre-quick-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.genre-quick-btn{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;cursor:pointer;transition:all .15s;text-align:left}
+.genre-quick-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.genre-quick-name{font-weight:600;font-size:.92rem}
+.genre-quick-meta{font-size:.74rem;color:var(--text2)}
 .quick-row{display:flex;gap:8px;margin-bottom:16px}
 .quick-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:.78rem;color:var(--text2);cursor:pointer}
 .quick-btn:hover{border-color:var(--accent);color:var(--accent2)}
@@ -122,6 +127,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div class="cat-list" id="catList"></div>
     <div class="range-info" id="rangeInfo"></div>
     <button class="btn-primary" onclick="startGame()">ゲーム開始！</button><br>
+    <div class="panel-title" style="margin-top:22px;font-size:.95rem">ジャンル別にすぐ始める</div>
+    <div class="genre-quick-list" id="genreQuickList"></div>
     <button class="btn-back" onclick="showScreen('screenHome')">← 単語帳選択へ戻る</button>
   </div>
 </div>
@@ -394,8 +401,21 @@ async function selectDeck(i) {
   document.getElementById('catList').innerHTML = cats.map(c =>
     `<div class="cat-chip on" data-cat="${escapeHtml(c)}" onclick="toggleCat(this)">${escapeHtml(c)}</div>`
   ).join('');
+  document.getElementById('genreQuickList').innerHTML = cats.map(c => {
+    const n = currentDeck.words.filter(w => w.category === c).length;
+    return `<div class="genre-quick-btn" onclick="startGameWithCat('${escapeHtml(c).replace(/'/g,"\\'")}')">
+      <span class="genre-quick-name">${escapeHtml(c)}</span>
+      <span class="genre-quick-meta">${n} 語 →</span>
+    </div>`;
+  }).join('');
   updateRangeInfo();
   showScreen('screenRange');
+}
+function startGameWithCat(cat) {
+  selectedCats = new Set([cat]);
+  document.querySelectorAll('.cat-chip').forEach(el => el.classList.toggle('on', el.dataset.cat === cat));
+  updateRangeInfo();
+  startGame();
 }
 
 function toggleCat(el) {
