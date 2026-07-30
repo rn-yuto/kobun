@@ -51,6 +51,14 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .td-id{color:var(--text2);font-size:.78rem;width:40px}
 .td-en{color:var(--accent2);font-weight:700;white-space:nowrap}
 .td-ja{color:var(--text)}
+.learned-word{color:var(--gold) !important}
+.btn-ety{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.7rem;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn-ety:hover{border-color:var(--accent3);color:var(--accent3)}
+.history-section{margin-top:18px;width:100%;max-width:480px}
+.history-title{font-family:'Space Grotesk',sans-serif;font-size:0.9rem;font-weight:600;color:var(--text2);margin-bottom:8px;text-align:center}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px 13px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;font-size:0.8rem}
+.history-meta{color:var(--text2);font-size:0.7rem;margin-top:2px}
+.history-score{font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--gold)}
 .quick-row{display:flex;gap:8px;margin-bottom:16px}
 .quick-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:.78rem;color:var(--text2);cursor:pointer}
 .quick-btn:hover{border-color:var(--accent);color:var(--accent2)}
@@ -138,13 +146,22 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div id="deckLoading" class="loader">単語帳を読み込み中...</div>
   <div class="deck-grid" id="deckGrid" style="display:none"></div>
   <button class="btn-back" onclick="showScreen('screenModeSelect')">← モード選択へ</button>
+  <div id="homeHistory" class="history-section" style="display:none">
+    <div class="history-title">📊 最近の記録</div>
+    <div id="historyList"></div>
+  </div>
 </div>
 
 <!-- WORD LIST -->
 <div class="screen" id="screenWordList">
   <div class="panel" style="max-width:680px">
     <div class="panel-title" id="listTitle">単語一覧</div>
-    <input type="text" class="user-input" id="listSearch" placeholder="単語・意味・ジャンルで検索..." oninput="renderWordList()" style="margin-bottom:14px">
+    <input type="text" class="user-input" id="listSearch" placeholder="単語・意味・ジャンルで検索..." oninput="renderWordList()" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="text" class="user-input" id="listIdFrom" placeholder="番号(from)" oninput="renderWordList()">
+      <span style="color:var(--text2)">〜</span>
+      <input type="text" class="user-input" id="listIdTo" placeholder="番号(to)" oninput="renderWordList()">
+    </div>
     <div class="range-info" id="listCount"></div>
     <div style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:12px" id="listTableWrap"></div>
     <button class="btn-back" onclick="showScreen('screenHome')">← 単語帳選択へ戻る</button>
@@ -155,11 +172,20 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 <div class="screen" id="screenRange">
   <div class="panel">
     <div class="panel-title" id="rangeTitle">出題範囲を選択</div>
+    <div class="range-inputs" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <input type="text" class="user-input" id="rangeIdFrom" placeholder="番号(from) 例:1" oninput="updateRangeInfo()">
+      <span style="color:var(--text2)">〜</span>
+      <input type="text" class="user-input" id="rangeIdTo" placeholder="番号(to) 例:100" oninput="updateRangeInfo()">
+    </div>
+    <div class="range-info" style="margin-bottom:14px;font-size:.72rem">※ 番号を空欄にすると全番号が対象。番号は文字列比較のため、数値のみのIDは数値として、それ以外はそのまま範囲判定します</div>
     <div class="quick-row">
       <button class="quick-btn" onclick="selectAllCats(true)">すべて選択</button>
       <button class="quick-btn" onclick="selectAllCats(false)">すべて解除</button>
     </div>
     <div class="cat-list" id="catList"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2);margin-bottom:10px">
+      <input type="checkbox" id="excludeLearned" checked onchange="updateRangeInfo()"> 「覚えた」単語を出題しない
+    </label>
     <div class="range-info" id="rangeInfo"></div>
     <button class="btn-primary" onclick="startGame()">ゲーム開始！</button><br>
     <div class="panel-title" style="margin-top:22px;font-size:.95rem">ジャンル別にすぐ始める</div>
@@ -174,6 +200,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div>
       <div class="word-num" id="g_wordNum">#1</div>
       <div class="progress-mini" id="g_progress">1 / 10</div>
+    </div>
+    <div style="text-align:center">
+      <div class="score-label">経過時間</div>
+      <div class="score-display" id="g_elapsed" style="color:var(--accent3)">0:00</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
       <button class="btn-back" style="padding:5px 10px;font-size:.72rem;margin:0" onclick="endGame()">終了</button>
@@ -195,6 +225,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <button class="btn-incorrect" onclick="judge(false)">✕ 不正解だった</button>
     </div>
     <div class="next-hint" id="g_nextHint" style="display:none">タップ / スペースキーで次へ</div>
+    <button class="btn-back" id="g_prevBtn" style="margin-top:14px" onclick="prevQuestion()">← 前の問題に戻る</button>
   </div>
 </div>
 
@@ -213,6 +244,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     </div>
   </div>
   <div style="display:flex;gap:8px;margin-top:14px;width:100%;max-width:480px;flex-wrap:wrap">
+    <button class="btn-primary" style="flex:1;min-width:100px;background:linear-gradient(135deg,var(--red),#b91c1c);display:none" id="btnRetryWrong" onclick="retryWrong()">間違えた問題</button>
     <button class="btn-primary" style="flex:1;min-width:100px" onclick="retryGame()">もう一度</button>
     <button class="btn-back" style="flex:1;min-width:100px;margin:0" onclick="showScreen('screenHome')">単語帳選択へ</button>
   </div>
@@ -231,7 +263,7 @@ const GH_OWNER = '';   // 例: 'yourname'
 const GH_REPO  = '';   // 例: 'kobun-tango'
 const GH_BRANCH = 'main';
 // スプレッドシート連携用 GAS Web アプリ URL（Gemini に作成してもらったら差し替える）
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwgTCJRcKbTXNq91Am6m_P2YVvX2vK7qnny-O3zZEmRj_k9taklQquULdMRuLpKOchR/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxrjfDNXmQAwp-LOCBy_PWoWgKj5cypVkaXEKb7BRSb2p7BiYqUIO9VoIYL5lh5aNsG/exec';
 
 // ===================================================================
 // 状態
@@ -245,6 +277,34 @@ let qIndex = 0;
 let correctCount = 0;
 let wrongList = [];
 let revealed = false;
+let answered = [];       // per-question judged result (true/false/null) — 前の問題に戻る用
+let playStartTime = null;
+let elapsedInterval = null;
+
+// ===== 最近のプレイ記録（ローカル履歴） =====
+function historyKey() { return 'kobun_history_' + currentUser; }
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(historyKey()) || '[]'); } catch(e) { return []; }
+}
+function pushHistory(entry) {
+  const key = historyKey();
+  const hist = loadHistory();
+  hist.unshift(entry);
+  if (hist.length > 20) hist.pop();
+  localStorage.setItem(key, JSON.stringify(hist));
+}
+function renderHistoryList() {
+  if (!currentUser) { document.getElementById('homeHistory').style.display = 'none'; return; }
+  const hist = loadHistory();
+  if (!hist.length) { document.getElementById('homeHistory').style.display = 'none'; return; }
+  document.getElementById('homeHistory').style.display = 'block';
+  document.getElementById('historyList').innerHTML = hist.slice(0, 5).map(h =>
+    `<div class="history-item"><div>
+       <div>${escapeHtml(h.deck)}</div>
+       <div class="history-meta">${escapeHtml(h.date)}　${h.correct}/${h.total}問${h.elapsed ? '　' + escapeHtml(h.elapsed) : ''}</div>
+     </div><div class="history-score">${h.pct}%</div></div>`
+  ).join('');
+}
 let deckStats = {};       // {id: {correct,total}} for currentUser+currentDeck (from GAS)
 
 // ===================================================================
@@ -270,6 +330,24 @@ function updateLocalWordStat(id, isCorrect) {
   bucket[id].total++;
   if (isCorrect) bucket[id].correct++;
   saveUserStatsLocal();
+}
+
+// ===== 「覚えた」単語 =====
+let learnedWords = new Set(); // currentDeck に対する学習済み単語ID
+function learnedKey(deckName) {
+  return currentUser === 'GUEST' ? null : 'kobun_learned_' + currentUser + '_' + deckName;
+}
+function loadLearnedWords(deckName) {
+  const k = learnedKey(deckName); if (!k) { learnedWords = new Set(); return; }
+  try { learnedWords = new Set(JSON.parse(localStorage.getItem(k) || '[]')); } catch(e) { learnedWords = new Set(); }
+}
+function saveLearnedWords(deckName) {
+  const k = learnedKey(deckName); if (!k) return;
+  localStorage.setItem(k, JSON.stringify([...learnedWords]));
+}
+function setLearned(deckName, id, isLearned) {
+  if (isLearned) learnedWords.add(id); else learnedWords.delete(id);
+  saveLearnedWords(deckName);
 }
 
 let currentAppMode = 'game'; // 'game' or 'list'
@@ -310,6 +388,7 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'screenHome') renderHistoryList();
 }
 
 // ===================================================================
@@ -431,6 +510,7 @@ async function fetchDeckWords(d) {
 }
 
 let listWords = [];
+let listDeckName = '';
 async function selectDeckForList(i) {
   const d = DECKS[i];
   try {
@@ -439,25 +519,67 @@ async function selectDeckForList(i) {
     alert('単語帳の読み込みに失敗しました: ' + d.file + '\n(' + e.message + ')');
     return;
   }
+  listDeckName = d.name;
+  loadLearnedWords(listDeckName);
+  ensureDeckStatsSheet(listDeckName, listWords.map(w => w.id));
   document.getElementById('listTitle').textContent = d.name + '：単語一覧';
   document.getElementById('listSearch').value = '';
+  document.getElementById('listIdFrom').value = '';
+  document.getElementById('listIdTo').value = '';
   renderWordList();
   showScreen('screenWordList');
 }
+function getStatPct(deckName, id) {
+  const bucket = (userStats[deckName] || {})[id];
+  if (!bucket || bucket.total === 0) return -1;
+  return Math.round(bucket.correct / bucket.total * 100);
+}
 function renderWordList() {
   const q = document.getElementById('listSearch').value.trim().toLowerCase();
+  const fromRaw = document.getElementById('listIdFrom').value.trim();
+  const toRaw = document.getElementById('listIdTo').value.trim();
+  const inRange = (id) => {
+    if (!fromRaw && !toRaw) return true;
+    const idNum = Number(id), fromNum = fromRaw ? Number(fromRaw) : null, toNum = toRaw ? Number(toRaw) : null;
+    if (!isNaN(idNum) && (!fromRaw || !isNaN(fromNum)) && (!toRaw || !isNaN(toNum))) {
+      if (fromNum !== null && idNum < fromNum) return false;
+      if (toNum !== null && idNum > toNum) return false;
+      return true;
+    }
+    if (fromRaw && String(id) < fromRaw) return false;
+    if (toRaw && String(id) > toRaw) return false;
+    return true;
+  };
   const filtered = listWords.filter(w => {
+    if (!inRange(w.id)) return false;
     if (!q) return true;
     const meaningText = w.meaning.map(b => b.num + b.lines.join('。')).join(' ').toLowerCase();
     return w.word.toLowerCase().includes(q) || w.category.toLowerCase().includes(q) || meaningText.includes(q);
   });
   document.getElementById('listCount').textContent = filtered.length + ' / ' + listWords.length + ' 語';
+  const showStat = currentUser !== 'GUEST';
   document.getElementById('listTableWrap').innerHTML =
-    '<table class="word-table"><thead><tr><th style="width:40px">#</th><th style="width:90px">ジャンル</th><th>単語</th><th>意味</th></tr></thead><tbody>' +
-    filtered.map(w =>
-      `<tr><td class="td-id">${escapeHtml(w.id)}</td><td class="td-ja">${escapeHtml(w.category)}</td>` +
-      `<td class="td-en">${escapeHtml(w.word)}</td><td class="td-ja">${escapeHtml(w.meaning.map(b => b.num + b.lines.join('。') + '。').join(' '))}</td></tr>`
-    ).join('') + '</tbody></table>';
+    '<table class="word-table"><thead><tr><th style="width:40px">#</th><th style="width:90px">ジャンル</th><th>単語</th><th>意味</th>' +
+    (showStat ? '<th style="width:64px">正答率</th>' : '') + '<th style="width:64px">学習</th></tr></thead><tbody>' +
+    filtered.map(w => {
+      const isLearned = learnedWords.has(w.id);
+      const pct = getStatPct(listDeckName, w.id);
+      const pctStr = pct === -1 ? '-' : pct + '%';
+      return `<tr>
+        <td class="td-id">${escapeHtml(w.id)}</td>
+        <td class="td-ja">${escapeHtml(w.category)}</td>
+        <td class="td-en${isLearned ? ' learned-word' : ''}">${escapeHtml(w.word)}${isLearned ? ' ✅' : ''}</td>
+        <td class="td-ja">${escapeHtml(w.meaning.map(b => b.num + b.lines.join('。') + '。').join(' '))}</td>
+        ${showStat ? `<td class="td-id">${pctStr}</td>` : ''}
+        <td><button class="btn-ety" onclick="toggleLearnedFromList('${String(w.id).replace(/'/g,"\\'")}', this)">${isLearned ? '解除' : '覚えた'}</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+function toggleLearnedFromList(id, btn) {
+  if (currentUser === 'GUEST') { alert('ゲストモードでは記録できません'); return; }
+  const isLearned = learnedWords.has(id);
+  setLearned(listDeckName, id, !isLearned);
+  renderWordList();
 }
 
 // ===================================================================
@@ -467,12 +589,19 @@ async function selectDeck(i) {
   const d = DECKS[i];
   try {
     const words = await fetchDeckWords(d);
-    currentDeck = { name: d.name, file: d.file, words };
+    const idRowMap = {};
+    words.forEach((w, idx) => { idRowMap[w.id] = idx + 2; }); // 1行目はヘッダー想定
+    currentDeck = { name: d.name, file: d.file, words, idRowMap };
   } catch (e) {
     alert('単語帳の読み込みに失敗しました: ' + d.file + '\n' + WORDS_DIR + '/' + d.file + ' が正しい場所に存在するか確認してください。\n(' + e.message + ')');
     return;
   }
-  await loadDeckStats();
+  loadDeckStats();
+  ensureDeckStatsSheet(currentDeck.name, currentDeck.words.map(w => w.id));
+  loadLearnedWords(currentDeck.name);
+  document.getElementById('rangeIdFrom').value = '';
+  document.getElementById('rangeIdTo').value = '';
+  document.getElementById('excludeLearned').checked = true;
   const cats = [...new Set(currentDeck.words.map(w => w.category))];
   selectedCats = new Set(cats);
   document.getElementById('rangeTitle').textContent = currentDeck.name + '：出題範囲を選択';
@@ -508,8 +637,33 @@ function selectAllCats(on) {
   document.querySelectorAll('.cat-chip').forEach(el => el.classList.toggle('on', on));
   updateRangeInfo();
 }
+function matchesIdRange(id) {
+  const fromRaw = document.getElementById('rangeIdFrom').value.trim();
+  const toRaw = document.getElementById('rangeIdTo').value.trim();
+  if (!fromRaw && !toRaw) return true;
+  const idNum = Number(id);
+  const fromNum = fromRaw ? Number(fromRaw) : null;
+  const toNum = toRaw ? Number(toRaw) : null;
+  if (!isNaN(idNum) && (fromRaw === '' || !isNaN(fromNum)) && (toRaw === '' || !isNaN(toNum))) {
+    if (fromNum !== null && idNum < fromNum) return false;
+    if (toNum !== null && idNum > toNum) return false;
+    return true;
+  }
+  // 数値化できないIDは文字列としてそのまま範囲判定
+  if (fromRaw && String(id) < fromRaw) return false;
+  if (toRaw && String(id) > toRaw) return false;
+  return true;
+}
+function filterPool() {
+  const excludeLearned = document.getElementById('excludeLearned').checked;
+  return currentDeck.words.filter(w =>
+    selectedCats.has(w.category) &&
+    matchesIdRange(w.id) &&
+    (!excludeLearned || !learnedWords.has(w.id))
+  );
+}
 function updateRangeInfo() {
-  const n = currentDeck.words.filter(w => selectedCats.has(w.category)).length;
+  const n = filterPool().length;
   document.getElementById('rangeInfo').textContent = `出題対象: ${n} 語`;
 }
 
@@ -519,17 +673,58 @@ function updateRangeInfo() {
 function loadDeckStats() {
   deckStats = (userStats[currentDeck.name]) || {};
 }
+// 単語帳ごとの専用Statsシートを作成/同期する（GUEST・GAS未設定時はスキップ）。
+// ids はCSVの並び順そのまま（A列に書き込まれる順序と一致させる必要がある）。
+function ensureDeckStatsSheet(deckName, ids) {
+  if (currentUser === 'GUEST' || !GAS_URL || GAS_URL.startsWith('REPLACE')) return;
+  fetch(`${GAS_URL}?user=${encodeURIComponent(currentUser)}&deck=${encodeURIComponent(deckName)}&ids=${encodeURIComponent(ids.join(','))}`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.error) {
+        userStats[deckName] = data.stats || {};
+        saveUserStatsLocal();
+        if (currentDeck && currentDeck.name === deckName) { loadDeckStats(); updateRangeInfo(); }
+        if (listDeckName === deckName && document.getElementById('screenWordList').classList.contains('active')) renderWordList();
+      }
+    })
+    .catch(() => { /* オフライン時は既存キャッシュのまま */ });
+}
 
 // ===================================================================
 // ゲーム本体
 // ===================================================================
 function startGame() {
-  const pool = currentDeck.words.filter(w => selectedCats.has(w.category));
-  if (!pool.length) { alert('出題範囲を1つ以上選択してください'); return; }
+  const pool = filterPool();
+  if (!pool.length) { alert('出題範囲に単語がありません（番号・ジャンル・「覚えた」除外の条件を確認してください）'); return; }
+  beginQueue(pool);
+}
+function beginQueue(pool) {
   queue = shuffle(pool);
   qIndex = 0; correctCount = 0; wrongList = [];
+  answered = new Array(queue.length).fill(null);
   showScreen('screenGame');
+  startElapsedTimer();
   renderQuestion();
+}
+function retryWrong() {
+  if (!wrongList.length) return;
+  beginQueue([...wrongList]);
+}
+function startElapsedTimer() {
+  playStartTime = Date.now();
+  clearInterval(elapsedInterval);
+  updateElapsedDisplay();
+  elapsedInterval = setInterval(updateElapsedDisplay, 1000);
+}
+function updateElapsedDisplay() {
+  const sec = playStartTime ? Math.floor((Date.now() - playStartTime) / 1000) : 0;
+  const m = Math.floor(sec / 60), s = (sec % 60).toString().padStart(2, '0');
+  const el = document.getElementById('g_elapsed');
+  if (el) el.textContent = m + ':' + s;
+}
+function getElapsedString() {
+  const sec = playStartTime ? Math.floor((Date.now() - playStartTime) / 1000) : 0;
+  return Math.floor(sec / 60) + '分' + (sec % 60).toString().padStart(2, '0') + '秒';
 }
 function shuffle(arr) {
   const a = [...arr];
@@ -539,21 +734,32 @@ function shuffle(arr) {
 function renderQuestion() {
   revealed = false;
   const w = queue[qIndex];
+  const attempted = answered.filter(a => a !== null).length;
   document.getElementById('g_wordNum').textContent = '#' + (qIndex+1);
   document.getElementById('g_progress').textContent = (qIndex+1) + ' / ' + queue.length;
   document.getElementById('g_progressBar').style.width = (qIndex/queue.length*100) + '%';
-  document.getElementById('g_score').textContent = qIndex === 0 ? '-' : Math.round(correctCount/qIndex*100) + '%';
+  document.getElementById('g_score').textContent = attempted === 0 ? '-' : Math.round(correctCount/attempted*100) + '%';
   document.getElementById('g_cat').textContent = w.category;
   document.getElementById('g_word').textContent = w.word;
   document.getElementById('g_answerBoxes').innerHTML = w.meaning.map(b =>
     `<div class="answer-box"><span class="answer-box-num">${b.num}</span><span class="answer-box-body">???</span></div>`
   ).join('');
-  document.getElementById('g_revealBtn').style.display = 'block';
-  document.getElementById('g_judgeBtns').classList.remove('visible');
+  document.getElementById('g_prevBtn').style.display = qIndex > 0 ? 'block' : 'none';
+  if (answered[qIndex] !== null) {
+    revealAnswer(true);
+  } else {
+    document.getElementById('g_revealBtn').style.display = 'block';
+    document.getElementById('g_judgeBtns').classList.remove('visible');
+  }
   document.getElementById('g_nextHint').style.display = 'none';
 }
-function revealAnswer() {
-  if (revealed) return;
+function prevQuestion() {
+  if (qIndex <= 0) return;
+  qIndex--;
+  renderQuestion();
+}
+function revealAnswer(isReview) {
+  if (revealed && !isReview) return;
   revealed = true;
   const w = queue[qIndex];
   const boxes = document.querySelectorAll('#g_answerBoxes .answer-box');
@@ -564,9 +770,29 @@ function revealAnswer() {
   });
   document.getElementById('g_revealBtn').style.display = 'none';
   document.getElementById('g_judgeBtns').classList.add('visible');
+  const correctBtn = document.querySelector('#g_judgeBtns .btn-correct');
+  const incorrectBtn = document.querySelector('#g_judgeBtns .btn-incorrect');
+  correctBtn.style.outline = ''; incorrectBtn.style.outline = '';
+  if (answered[qIndex] === true) correctBtn.style.outline = '3px solid #fff';
+  if (answered[qIndex] === false) incorrectBtn.style.outline = '3px solid #fff';
+}
+function undoLocalWordStat(id, wasCorrect) {
+  if (currentUser === 'GUEST' || !currentDeck) return;
+  const bucket = (userStats[currentDeck.name] || {})[id];
+  if (!bucket) return;
+  bucket.total = Math.max(0, bucket.total - 1);
+  if (wasCorrect) bucket.correct = Math.max(0, bucket.correct - 1);
+  saveUserStatsLocal();
 }
 function judge(isCorrect) {
   const w = queue[qIndex];
+  const prev = answered[qIndex];
+  if (prev !== null) {
+    if (prev) correctCount--;
+    wrongList = wrongList.filter(x => x !== w);
+    undoLocalWordStat(w.id, prev);
+  }
+  answered[qIndex] = isCorrect;
   if (isCorrect) correctCount++;
   else wrongList.push(w);
   updateLocalWordStat(w.id, isCorrect);
@@ -579,21 +805,33 @@ function judge(isCorrect) {
   }, 350);
 }
 function endGame() {
-  const total = qIndex;
+  clearInterval(elapsedInterval);
+  const total = answered.filter(a => a !== null).length;
   const pct = total ? Math.round(correctCount/total*100) : 0;
+  const elapsedStr = getElapsedString();
   document.getElementById('r_pct').textContent = pct + '%';
   document.getElementById('r_detail').innerHTML =
-    `<span>${correctCount}</span> / <span>${total}</span> 問正解`;
+    `<div>単語帳: <span>${escapeHtml(currentDeck.name)}</span></div>` +
+    `<div>正解数: <span>${correctCount} / ${total}</span></div>` +
+    `<div>プレイ時間: <span>${elapsedStr}</span></div>`;
   const wlSec = document.getElementById('wrongListSection');
+  const btnRetryWrong = document.getElementById('btnRetryWrong');
   if (wrongList.length) {
     wlSec.style.display = 'block';
     document.getElementById('wrongListBody').innerHTML = wrongList.map(w =>
       `<div class="wrong-item"><div class="wrong-word">${escapeHtml(w.word)}</div>
        <div class="wrong-mean">${escapeHtml(w.meaning.map(b => b.num + b.lines.join('。')).join(' '))}</div></div>`
     ).join('');
-  } else { wlSec.style.display = 'none'; }
+    btnRetryWrong.style.display = 'block';
+    btnRetryWrong.textContent = '間違えた問題 (' + wrongList.length + '問)';
+  } else { wlSec.style.display = 'none'; btnRetryWrong.style.display = 'none'; }
   showScreen('screenResults');
-  saveResults(total);
+  if (total > 0 && currentUser) {
+    pushHistory({ deck: currentDeck.name, correct: correctCount, total, pct,
+      date: new Date().toLocaleDateString('ja-JP') + ' ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}),
+      elapsed: elapsedStr });
+  }
+  saveResults(total, elapsedStr);
 }
 
 // キーボード/タップで次へ（正解/不正解ボタン表示中を除く）
@@ -610,7 +848,7 @@ function retryGame() { startGame(); }
 // ===================================================================
 // スプレッドシートへ結果送信（GAS）
 // ===================================================================
-function saveResults(total) {
+function saveResults(total, elapsedStr) {
   const el = document.getElementById('r_saveStatus');
   if (currentUser === 'GUEST' || !currentUser) {
     el.textContent = 'ゲストモード（クラウド保存なし）';
@@ -623,7 +861,9 @@ function saveResults(total) {
   const now = new Date();
   const dateStr = now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+
     now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const words = queue.slice(0, total).map(w => ({ id: w.id, word: w.word, correct: !wrongList.includes(w) }));
+  const wordUpdates = queue.map((w, i) =>
+    answered[i] !== null ? { row: currentDeck.idRowMap[w.id], correct: answered[i] } : null
+  ).filter(Boolean);
   const pct = total ? Math.round(correctCount/total*100) : 0;
   el.textContent = 'クラウドに同期中...';
   fetch(GAS_URL, {
@@ -631,7 +871,7 @@ function saveResults(total) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       user: currentUser, deck: currentDeck.name,
-      correct: correctCount, total, pct, date: dateStr, words
+      correct: correctCount, total, pct, date: dateStr, elapsed: elapsedStr, wordUpdates
     })
   }).then(() => { el.textContent = '✓ スプレッドシートに保存完了！'; })
     .catch(() => { el.textContent = 'クラウド保存に失敗しました'; });
