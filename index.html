@@ -28,7 +28,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .deck-meta{font-size:.78rem;color:var(--text2)}
 .deck-pct{font-size:.72rem;color:var(--accent3);margin-top:6px}
 .user-row{display:flex;gap:8px;align-items:center;width:100%;max-width:420px;margin-bottom:6px}
-.user-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:.92rem;color:var(--text);outline:none;font-family:'Noto Sans JP',sans-serif}
+.user-input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:.92rem;color:var(--text);outline:none;font-family:'Noto Sans JP',sans-serif}
 .user-input:focus{border-color:var(--accent)}
 .btn-primary{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:14px;padding:15px;font-size:.95rem;font-weight:600;color:#fff;cursor:pointer;transition:all .2s;font-family:'Noto Sans JP',sans-serif;letter-spacing:.05em}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px var(--glow)}
@@ -44,7 +44,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .genre-quick-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
 .genre-quick-name{font-weight:600;font-size:.92rem}
 .genre-quick-meta{font-size:.74rem;color:var(--text2)}
-.word-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.word-table{width:100%;min-width:560px;border-collapse:collapse;font-size:.83rem}
 .word-table th{padding:9px 10px;text-align:left;color:var(--text2);font-size:.7rem;letter-spacing:.06em;border-bottom:1px solid var(--border);font-weight:600;position:sticky;top:0;background:var(--surface)}
 .word-table td{padding:9px 10px;border-bottom:1px solid rgba(74,45,45,0.4);vertical-align:top}
 .word-table tr:hover td{background:var(--surface2)}
@@ -104,6 +104,32 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .wrong-word{font-weight:700;color:var(--accent2)}
 .wrong-mean{color:var(--text2);font-size:.78rem;margin-top:2px}
 .loader{font-size:.9rem;color:var(--text2);margin-top:60px;text-align:center}
+@media (max-width: 480px){
+  .screen{padding:14px}
+  .panel{padding:18px 14px;border-radius:18px}
+  .deck-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .deck-card{padding:16px 14px}
+  .quick-row{flex-wrap:wrap}
+  .cat-chip{font-size:.76rem;padding:7px 12px}
+  .genre-quick-btn{padding:10px 12px}
+  .genre-quick-name{font-size:.85rem;word-break:break-word;margin-right:6px}
+  .genre-quick-meta{white-space:nowrap;font-size:.7rem}
+  .game-header{padding:8px 8px;flex-wrap:nowrap}
+  .word-num{font-size:.78rem}
+  .progress-mini{font-size:.64rem}
+  .score-label{font-size:.56rem}
+  .score-display{font-size:.8rem}
+  .question-card{padding:22px 14px}
+  .answer-box{padding:12px 12px}
+  .history-item{padding:8px 10px;font-size:.74rem}
+  .history-meta{font-size:.64rem}
+  .word-table{font-size:.76rem}
+  .word-table th,.word-table td{padding:7px 6px}
+  .results-score-big{font-size:2.4rem}
+}
+@media (max-width: 340px){
+  .deck-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -157,13 +183,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div class="panel" style="max-width:680px">
     <div class="panel-title" id="listTitle">単語一覧</div>
     <input type="text" class="user-input" id="listSearch" placeholder="単語・意味・ジャンルで検索..." oninput="renderWordList()" style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <input type="text" class="user-input" id="listIdFrom" placeholder="番号(from)" oninput="renderWordList()">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="text" class="user-input" id="listIdFrom" placeholder="番号(from)" oninput="renderWordList()" style="min-width:90px">
       <span style="color:var(--text2)">〜</span>
-      <input type="text" class="user-input" id="listIdTo" placeholder="番号(to)" oninput="renderWordList()">
+      <input type="text" class="user-input" id="listIdTo" placeholder="番号(to)" oninput="renderWordList()" style="min-width:90px">
     </div>
     <div class="range-info" id="listCount"></div>
-    <div style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:12px" id="listTableWrap"></div>
+    <div style="max-height:60vh;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:12px" id="listTableWrap"></div>
     <button class="btn-back" onclick="showScreen('screenHome')">← 単語帳選択へ戻る</button>
   </div>
 </div>
@@ -172,10 +198,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 <div class="screen" id="screenRange">
   <div class="panel">
     <div class="panel-title" id="rangeTitle">出題範囲を選択</div>
-    <div class="range-inputs" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <input type="text" class="user-input" id="rangeIdFrom" placeholder="番号(from) 例:1" oninput="updateRangeInfo()">
+    <div class="range-inputs" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px">
+      <input type="text" class="user-input" id="rangeIdFrom" placeholder="番号(from) 例:1" oninput="updateRangeInfo()" style="min-width:90px">
       <span style="color:var(--text2)">〜</span>
-      <input type="text" class="user-input" id="rangeIdTo" placeholder="番号(to) 例:100" oninput="updateRangeInfo()">
+      <input type="text" class="user-input" id="rangeIdTo" placeholder="番号(to) 例:100" oninput="updateRangeInfo()" style="min-width:90px">
     </div>
     <div class="range-info" style="margin-bottom:14px;font-size:.72rem">※ 番号を空欄にすると全番号が対象。番号は文字列比較のため、数値のみのIDは数値として、それ以外はそのまま範囲判定します</div>
     <div class="quick-row">
