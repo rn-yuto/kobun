@@ -51,6 +51,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .td-id{color:var(--text2);font-size:.78rem;width:40px}
 .td-en{color:var(--accent2);font-weight:700;white-space:nowrap}
 .td-ja{color:var(--text)}
+.meaning-block{display:block;line-height:1.6}
+.meaning-block:not(:last-child){margin-bottom:2px}
 .learned-word{color:var(--gold) !important}
 .btn-ety{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.7rem;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s}
 .btn-ety:hover{border-color:var(--accent3);color:var(--accent3)}
@@ -595,7 +597,7 @@ function renderWordList() {
         <td class="td-id">${escapeHtml(w.id)}</td>
         <td class="td-ja">${escapeHtml(w.category)}</td>
         <td class="td-en${isLearned ? ' learned-word' : ''}">${escapeHtml(w.word)}${isLearned ? ' ✅' : ''}</td>
-        <td class="td-ja">${escapeHtml(w.meaning.map(b => b.num + b.lines.join('。') + '。').join(' '))}</td>
+        <td class="td-ja">${w.meaning.map(b => `<span class="meaning-block">${escapeHtml(b.num + b.lines.join('。') + '。')}</span>`).join('')}</td>
         ${showStat ? `<td class="td-id">${pctStr}</td>` : ''}
         <td><button class="btn-ety" onclick="toggleLearnedFromList('${String(w.id).replace(/'/g,"\\'")}', this)">${isLearned ? '解除' : '覚えた'}</button></td>
       </tr>`;
