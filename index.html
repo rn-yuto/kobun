@@ -37,6 +37,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:26px 22px;width:100%;max-width:520px}
 .panel-title{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:600;text-align:center;margin-bottom:16px}
 .cat-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.flip-toggle{display:flex;background:var(--surface2);border-radius:14px;padding:4px;margin-bottom:16px;gap:4px}
+.flip-option{flex:1;text-align:center;padding:10px 8px;border-radius:10px;font-size:.85rem;font-weight:600;color:var(--text2);cursor:pointer;transition:all .2s}
+.flip-option.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
 .cat-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:.82rem;color:var(--text2);cursor:pointer;transition:all .15s;user-select:none}
 .cat-chip.on{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:var(--accent);color:#fff}
 .genre-quick-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
@@ -53,6 +56,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .td-ja{color:var(--text)}
 .meaning-block{display:block;line-height:1.6}
 .meaning-block:not(:last-child){margin-bottom:2px}
+#listTableWrap{cursor:grab}
+#listTableWrap.dragging{cursor:grabbing;user-select:none}
 .learned-word{color:var(--gold) !important}
 .btn-ety{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:.7rem;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s}
 .btn-ety:hover{border-color:var(--accent3);color:var(--accent3)}
@@ -78,6 +83,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .question-label{font-size:.72rem;color:var(--text2);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
 .question-cat{font-size:.72rem;color:var(--accent3);margin-bottom:12px}
 .question-word{font-family:'Noto Sans JP',sans-serif;font-size:clamp(1.6rem,7vw,2.6rem);font-weight:700;color:var(--text);line-height:1.3}
+.question-word-small{font-size:clamp(1.05rem,4.2vw,1.5rem) !important;text-align:left;line-height:1.6}
 .answer-boxes{width:100%;margin-bottom:16px;display:flex;flex-direction:column;gap:10px}
 .answer-box{background:var(--surface2);border:2px dashed var(--border);border-radius:14px;padding:14px 16px;text-align:left;transition:all .2s}
 .answer-box.revealed{border-style:solid;border-color:var(--accent3);background:var(--surface)}
@@ -90,6 +96,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .judge-btns{display:flex;gap:10px;width:100%;display:none}
 .judge-btns.visible{display:flex}
 .btn-correct{flex:1;background:linear-gradient(135deg,#059669,var(--green));border:none;border-radius:14px;padding:14px;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer}
+.btn-learn{width:100%;max-width:320px;background:var(--surface2);border:1px solid var(--gold);border-radius:14px;padding:11px;font-size:.84rem;font-weight:600;color:var(--gold);cursor:pointer;transition:all .2s;margin-bottom:10px;font-family:'Noto Sans JP',sans-serif}
+.btn-learn:hover{transform:translateY(-1px);filter:brightness(1.15)}
+.btn-learn.is-learned{background:linear-gradient(135deg,var(--gold),#d97706);color:#1a1206;border-color:transparent}
 .btn-incorrect{flex:1;background:linear-gradient(135deg,#dc2626,var(--red));border:none;border-radius:14px;padding:14px;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer}
 .btn-correct:hover,.btn-incorrect:hover{transform:translateY(-2px)}
 .next-hint{font-size:.76rem;color:var(--text2);text-align:center;margin-top:8px}
@@ -200,6 +209,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 <div class="screen" id="screenRange">
   <div class="panel">
     <div class="panel-title" id="rangeTitle">出題範囲を選択</div>
+    <div class="flip-toggle" id="flipToggle">
+      <div class="flip-option on" data-mode="0" onclick="setFlipMode(false)">単語 → 意味</div>
+      <div class="flip-option" data-mode="1" onclick="setFlipMode(true)">意味 → 単語</div>
+    </div>
     <div class="range-inputs" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px">
       <input type="text" class="user-input" id="rangeIdFrom" placeholder="番号(from) 例:1" oninput="updateRangeInfo()" style="min-width:90px">
       <span style="color:var(--text2)">〜</span>
@@ -252,6 +265,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <button class="btn-correct" onclick="judge(true)">⭕ 正解だった</button>
       <button class="btn-incorrect" onclick="judge(false)">✕ 不正解だった</button>
     </div>
+    <button class="btn-learn" id="g_learnBtn" style="display:none" onclick="toggleLearnedInGame()">✅ 覚えた単語にする</button>
     <div class="next-hint" id="g_nextHint" style="display:none">タップ / スペースキーで次へ</div>
     <button class="btn-back" id="g_prevBtn" style="margin-top:14px" onclick="prevQuestion()">← 前の問題に戻る</button>
   </div>
@@ -300,6 +314,11 @@ let DECKS = [];           // [{name, file}]
 let currentDeck = null;   // {name, file, words:[...]}
 let currentUser = '';
 let selectedCats = new Set();
+let flipMode = false; // false: 単語→意味, true: 意味→単語
+function setFlipMode(v) {
+  flipMode = v;
+  document.querySelectorAll('.flip-option').forEach(el => el.classList.toggle('on', (el.dataset.mode === '1') === v));
+}
 let queue = [];
 let qIndex = 0;
 let correctCount = 0;
@@ -462,15 +481,22 @@ async function loadDeckList() {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function catLabel(c) { return c ? c : '（ジャンルなし）'; }
 
 // ===================================================================
 // CSVパース
 // フォーマット: 分類,ID,単語,意味（"①〜。②〜。" 形式）
+// 2列のみ（単語,意味）の場合はジャンルなし・上から連番のIDを自動で振る
 // ===================================================================
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  let seq = 0;
   return lines.map(line => {
     const cols = splitCSVLine(line);
+    if (cols.length <= 2) {
+      seq++;
+      return { category: '', id: String(seq), word: cols[0] || '', meaningRaw: cols[1] || '' };
+    }
     return { category: cols[0] || '', id: cols[1] || '', word: cols[2] || '', meaningRaw: cols[3] || '' };
   });
 }
@@ -595,7 +621,7 @@ function renderWordList() {
       const pctStr = pct === -1 ? '-' : pct + '%';
       return `<tr>
         <td class="td-id">${escapeHtml(w.id)}</td>
-        <td class="td-ja">${escapeHtml(w.category)}</td>
+        <td class="td-ja">${escapeHtml(catLabel(w.category))}</td>
         <td class="td-en${isLearned ? ' learned-word' : ''}">${escapeHtml(w.word)}${isLearned ? ' ✅' : ''}</td>
         <td class="td-ja">${w.meaning.map(b => `<span class="meaning-block">${escapeHtml(b.num + b.lines.join('。') + '。')}</span>`).join('')}</td>
         ${showStat ? `<td class="td-id">${pctStr}</td>` : ''}
@@ -630,16 +656,17 @@ async function selectDeck(i) {
   document.getElementById('rangeIdFrom').value = '';
   document.getElementById('rangeIdTo').value = '';
   document.getElementById('excludeLearned').checked = true;
+  setFlipMode(false);
   const cats = [...new Set(currentDeck.words.map(w => w.category))];
   selectedCats = new Set(cats);
   document.getElementById('rangeTitle').textContent = currentDeck.name + '：出題範囲を選択';
   document.getElementById('catList').innerHTML = cats.map(c =>
-    `<div class="cat-chip on" data-cat="${escapeHtml(c)}" onclick="toggleCat(this)">${escapeHtml(c)}</div>`
+    `<div class="cat-chip on" data-cat="${escapeHtml(c)}" onclick="toggleCat(this)">${escapeHtml(catLabel(c))}</div>`
   ).join('');
   document.getElementById('genreQuickList').innerHTML = cats.map(c => {
     const n = currentDeck.words.filter(w => w.category === c).length;
     return `<div class="genre-quick-btn" onclick="startGameWithCat('${escapeHtml(c).replace(/'/g,"\\'")}')">
-      <span class="genre-quick-name">${escapeHtml(c)}</span>
+      <span class="genre-quick-name">${escapeHtml(catLabel(c))}</span>
       <span class="genre-quick-meta">${n} 語 →</span>
     </div>`;
   }).join('');
@@ -767,17 +794,32 @@ function renderQuestion() {
   document.getElementById('g_progress').textContent = (qIndex+1) + ' / ' + queue.length;
   document.getElementById('g_progressBar').style.width = (qIndex/queue.length*100) + '%';
   document.getElementById('g_score').textContent = attempted === 0 ? '-' : Math.round(correctCount/attempted*100) + '%';
-  document.getElementById('g_cat').textContent = w.category;
-  document.getElementById('g_word').textContent = w.word;
-  document.getElementById('g_answerBoxes').innerHTML = w.meaning.map(b =>
-    `<div class="answer-box"><span class="answer-box-num">${b.num}</span><span class="answer-box-body">???</span></div>`
-  ).join('');
+  const catEl = document.getElementById('g_cat');
+  catEl.textContent = w.category;
+  catEl.style.display = w.category ? 'block' : 'none';
+  const qLabelEl = document.querySelector('.question-label');
+  const wordEl = document.getElementById('g_word');
+  if (flipMode) {
+    qLabelEl.textContent = '次の意味に対応する古文単語は？';
+    wordEl.classList.add('question-word-small');
+    wordEl.innerHTML = w.meaning.map(b => `<span class="meaning-block">${escapeHtml(b.num + b.lines.join('。') + '。')}</span>`).join('');
+    document.getElementById('g_answerBoxes').innerHTML =
+      `<div class="answer-box"><span class="answer-box-body">???</span></div>`;
+  } else {
+    qLabelEl.textContent = '次の古文単語の意味は？';
+    wordEl.classList.remove('question-word-small');
+    wordEl.textContent = w.word;
+    document.getElementById('g_answerBoxes').innerHTML = w.meaning.map(b =>
+      `<div class="answer-box"><span class="answer-box-num">${b.num}</span><span class="answer-box-body">???</span></div>`
+    ).join('');
+  }
   document.getElementById('g_prevBtn').style.display = qIndex > 0 ? 'block' : 'none';
   if (answered[qIndex] !== null) {
     revealAnswer(true);
   } else {
     document.getElementById('g_revealBtn').style.display = 'block';
     document.getElementById('g_judgeBtns').classList.remove('visible');
+    document.getElementById('g_learnBtn').style.display = 'none';
   }
   document.getElementById('g_nextHint').style.display = 'none';
 }
@@ -791,11 +833,16 @@ function revealAnswer(isReview) {
   revealed = true;
   const w = queue[qIndex];
   const boxes = document.querySelectorAll('#g_answerBoxes .answer-box');
-  w.meaning.forEach((b, i) => {
-    boxes[i].classList.add('revealed');
-    boxes[i].querySelector('.answer-box-body').innerHTML =
-      b.lines.map(l => `<span class="answer-box-line">${escapeHtml(l)}。</span>`).join('');
-  });
+  if (flipMode) {
+    boxes[0].classList.add('revealed');
+    boxes[0].querySelector('.answer-box-body').innerHTML = `<span class="answer-box-line">${escapeHtml(w.word)}</span>`;
+  } else {
+    w.meaning.forEach((b, i) => {
+      boxes[i].classList.add('revealed');
+      boxes[i].querySelector('.answer-box-body').innerHTML =
+        b.lines.map(l => `<span class="answer-box-line">${escapeHtml(l)}。</span>`).join('');
+    });
+  }
   document.getElementById('g_revealBtn').style.display = 'none';
   document.getElementById('g_judgeBtns').classList.add('visible');
   const correctBtn = document.querySelector('#g_judgeBtns .btn-correct');
@@ -803,6 +850,22 @@ function revealAnswer(isReview) {
   correctBtn.style.outline = ''; incorrectBtn.style.outline = '';
   if (answered[qIndex] === true) correctBtn.style.outline = '3px solid #fff';
   if (answered[qIndex] === false) incorrectBtn.style.outline = '3px solid #fff';
+  updateLearnBtn();
+}
+function updateLearnBtn() {
+  const w = queue[qIndex];
+  const btn = document.getElementById('g_learnBtn');
+  if (currentUser === 'GUEST') { btn.style.display = 'none'; return; }
+  btn.style.display = 'block';
+  const isLearned = learnedWords.has(w.id);
+  btn.textContent = isLearned ? '✅ 覚えた単語（タップで解除）' : '☆ 覚えた単語にする';
+  btn.classList.toggle('is-learned', isLearned);
+}
+function toggleLearnedInGame() {
+  const w = queue[qIndex];
+  const isLearned = learnedWords.has(w.id);
+  setLearned(currentDeck.name, w.id, !isLearned);
+  updateLearnBtn();
 }
 function undoLocalWordStat(id, wasCorrect) {
   if (currentUser === 'GUEST' || !currentDeck) return;
@@ -904,6 +967,31 @@ function saveResults(total, elapsedStr) {
   }).then(() => { el.textContent = '✓ スプレッドシートに保存完了！'; })
     .catch(() => { el.textContent = 'クラウド保存に失敗しました'; });
 }
+
+// ===== ドラッグでスクロール（マウス操作でも表をつかんで動かせるように） =====
+(function enableDragScroll() {
+  const el = document.getElementById('listTableWrap');
+  if (!el) return;
+  let isDown = false, startX = 0, startY = 0, scrollLeftStart = 0, scrollTopStart = 0, moved = false;
+  el.addEventListener('mousedown', e => {
+    isDown = true; moved = false;
+    el.classList.add('dragging');
+    startX = e.pageX; startY = e.pageY;
+    scrollLeftStart = el.scrollLeft; scrollTopStart = el.scrollTop;
+  });
+  window.addEventListener('mouseup', () => { isDown = false; el.classList.remove('dragging'); });
+  window.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('dragging'); });
+  window.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const dx = e.pageX - startX, dy = e.pageY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    el.scrollLeft = scrollLeftStart - dx;
+    el.scrollTop = scrollTopStart - dy;
+  });
+  // ドラッグ後に誤って学習ボタン等をクリックしてしまわないようにする
+  el.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
+})();
 </script>
 </body>
 </html>
