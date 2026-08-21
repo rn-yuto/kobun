@@ -466,7 +466,7 @@ async function loadDeckList() {
       '単語帳が見つかりません。words/manifest.json に CSV ファイル名の一覧を用意するか、GH_OWNER/GH_REPO を設定してください。';
     return;
   }
-  DECKS = files.map(f => ({ file: f, name: f.replace(/\.csv$/i, '') }));
+  DECKS = files.map(f => f.trim()).filter(Boolean).map(f => ({ file: f, name: f.replace(/\.csv$/i, '') }));
   document.getElementById('deckLoading').style.display = 'none';
   const grid = document.getElementById('deckGrid');
   grid.style.display = 'grid';
@@ -550,17 +550,32 @@ function onDeckClick(i) {
 }
 
 async function fetchDeckWords(d) {
-  const r = await fetch(WORDS_DIR + '/' + d.file);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const text = await r.text();
-  if (/^\s*<(!DOCTYPE|html)/i.test(text)) {
-    throw new Error('CSVではなくHTMLが返ってきました（パス誤り、または404）');
-  }
+  const text = await fetchCsvTextWithFallback(d.file);
   const rows = parseCSV(text);
   if (!rows.length) throw new Error('CSVが空です');
   return rows.map(row => ({
     id: row.id, category: row.category, word: row.word, meaning: parseMeaning(row.meaningRaw)
   }));
+}
+// ファイル名のUnicode正規化揺れ（NFC/NFD）対策として両方試す
+async function fetchCsvTextWithFallback(filename) {
+  const candidates = [filename];
+  if (filename.normalize) {
+    const nfc = filename.normalize('NFC'), nfd = filename.normalize('NFD');
+    if (!candidates.includes(nfc)) candidates.push(nfc);
+    if (!candidates.includes(nfd)) candidates.push(nfd);
+  }
+  let lastErr = null;
+  for (const name of candidates) {
+    try {
+      const r = await fetch(WORDS_DIR + '/' + encodeURIComponent(name).replace(/%2F/g, '/'));
+      if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
+      const text = await r.text();
+      if (/^\s*<(!DOCTYPE|html)/i.test(text)) { lastErr = new Error('CSVではなくHTMLが返ってきました（パス誤り、または404）'); continue; }
+      return text;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('取得に失敗しました');
 }
 
 let listWords = [];
